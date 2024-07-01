@@ -6,14 +6,14 @@ from this application
 Attributes:
     CALLBACK_URL (str): This is the url for the endpoint that HTCondor
         jobs use to update the status for the running RelMon job.
-        For example: "https://cms-pdmv.cern.ch/relmonservice/api/update"
+        For example: "https://cms-pdmv-prod.web.cern.ch/relmonservice/api/update"
         For more details, please see the endpoint definition: /api/update.
     SERVICE_URL (str): This is the url for RelMonService2 application.
-        For example: "https://cms-pdmv.cern.ch/relmonservice"
+        For example: "https://cms-pdmv-prod.web.cern.ch/relmonservice"
         It is used to include the application's url into email notifications
         and for request cookies/tokens for authenticating callback request.
     REPORTS_URL (str): This is the url for RelMon report page. 
-        For example: "https://cms-pdmv.cern.ch/relmon"
+        For example: "https://cms-pdmv-prod.web.cern.ch/relmon"
         This is a static web page that renders all outputs for the reports.
     SUBMISSION_HOST (str): This is the server where this application will open an SSH session
         to submit jobs through HTCondor. For example: "lxplus.cern.ch"

@@ -12,7 +12,7 @@
           <ul>
             <li><span class="font-weight-light">ID:</span> {{relmonData.id}}</li>
             <li><span class="font-weight-light">Status:</span> <span :title="'HTCondor Status: ' + relmonData.condor_status + '\nHTCondor ID: ' + relmonData.condor_id">{{relmonData.status}}</span> <span v-if="relmonData.status == 'done'">
-              | <a target="_blank" :href="'https://cms-pdmv.cern.ch/relmon?q=' + relmonData.name">go to reports</a>
+              | <a target="_blank" :href="'https://cms-pdmv-prod.web.cern.ch/relmon?q=' + relmonData.name">go to reports</a>
             </span></li>
             <li><span class="font-weight-light">Last update:</span> {{niceDate(relmonData.last_update)}}</li>
           </ul>
