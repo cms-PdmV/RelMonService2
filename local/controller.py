@@ -11,11 +11,14 @@ import zipfile
 import json
 from multiprocessing import Manager
 from mongodb_database import Database
-from local.ssh_executor import SSHExecutor
+from core_lib.utils.ssh_executor import SSHExecutor
 from local.relmon import RelMon
 from local.file_creator import FileCreator
 from local.email_sender import EmailSender
 from environment import (
+    SUBMISSION_HOST,
+    SERVICE_ACCOUNT_USERNAME,
+    SERVICE_ACCOUNT_PASSWORD,
     SERVICE_URL,
     REPORTS_URL,
     REMOTE_DIRECTORY,
@@ -55,7 +58,11 @@ class Controller:
         if self.remote_directory[-1] == "/":
             self.remote_directory = self.remote_directory[:-1]
 
-        self.ssh_executor = SSHExecutor()
+        self.ssh_executor = SSHExecutor(
+            host=SUBMISSION_HOST,
+            username=SERVICE_ACCOUNT_USERNAME,
+            password=SERVICE_ACCOUNT_PASSWORD
+        )
         self.file_creator = FileCreator()
         self.email_sender = EmailSender()
         self.service_url = SERVICE_URL
@@ -184,8 +191,7 @@ class Controller:
         """
         Rename relmon reports file
         """
-        ssh_executor = SSHExecutor()
-        ssh_executor.execute_command(
+        self.ssh_executor.execute_command(
             [
                 "cd %s" % (self.file_creator.web_location),
                 "EXISTING_REPORT=$(ls -1 %s*.sqlite | head -n 1)" % (relmon_id),
@@ -328,7 +334,7 @@ class Controller:
             # Run condor_submit
             # Submission happens through lxplus as condor is not available on website machine
             # It is easier to ssh to lxplus than set up condor locally
-            stdout, stderr = self.ssh_executor.execute_command(
+            stdout, stderr, _ = self.ssh_executor.execute_command(
                 [
                     "cd %s" % (remote_relmon_directory),
                     "voms-proxy-init -voms cms --valid 24:00 --out $(pwd)/proxy.txt",
@@ -370,7 +376,7 @@ class Controller:
         self.logger.info(
             "Will check if %s is running in HTCondor, id: %s", relmon, relmon_condor_id
         )
-        stdout, stderr = self.ssh_executor.execute_command(
+        stdout, stderr, _ = self.ssh_executor.execute_command(
             "module load %s && condor_q -af:h ClusterId JobStatus | "
             "grep %s" % (HTCONDOR_MODULE, relmon_condor_id)
         )
