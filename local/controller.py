@@ -19,6 +19,7 @@ from environment import (
     SERVICE_URL,
     REPORTS_URL,
     REMOTE_DIRECTORY,
+    HTCONDOR_MODULE
 )
 
 
@@ -331,8 +332,8 @@ class Controller:
                 [
                     "cd %s" % (remote_relmon_directory),
                     "voms-proxy-init -voms cms --valid 24:00 --out $(pwd)/proxy.txt",
-                    "module load lxbatch/tzero && condor_submit RELMON_%s.sub"
-                    % (relmon_id),
+                    "module load %s && condor_submit RELMON_%s.sub"
+                    % (HTCONDOR_MODULE, relmon_id),
                 ]
             )
             # Parse result of condor_submit
@@ -370,8 +371,8 @@ class Controller:
             "Will check if %s is running in HTCondor, id: %s", relmon, relmon_condor_id
         )
         stdout, stderr = self.ssh_executor.execute_command(
-            "module load lxbatch/tzero && condor_q -af:h ClusterId JobStatus | "
-            "grep %s" % (relmon_condor_id)
+            "module load %s && condor_q -af:h ClusterId JobStatus | "
+            "grep %s" % (HTCONDOR_MODULE, relmon_condor_id)
         )
         new_condor_status = "<unknown>"
         if stdout and not stderr:
@@ -506,7 +507,7 @@ class Controller:
         condor_id = relmon.get_condor_id()
         if condor_id > 0:
             self.ssh_executor.execute_command(
-                "module load lxbatch/tzero && condor_rm %s" % (condor_id)
+                "module load %s && condor_rm %s" % (HTCONDOR_MODULE, condor_id)
             )
         else:
             self.logger.info(

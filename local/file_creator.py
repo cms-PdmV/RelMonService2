@@ -10,7 +10,8 @@ from environment import (
     CALLBACK_CLIENT_ID,
     CALLBACK_CLIENT_SECRET,
     CLIENT_ID,
-    CMSSW_RELEASE
+    CMSSW_RELEASE,
+    HTCONDOR_CAF_POOL
 )
 
 
@@ -151,6 +152,7 @@ class FileCreator:
             f"APPLICATION_CLIENT_ID={CLIENT_ID}"
         )
         credentials_env_arg = f'"{credentials_env}"'
+        accounting_group = "group_u_CMS.CAF.PHYS" if HTCONDOR_CAF_POOL else "group_u_CMS.u_zh.users"
         condor_file_content = [
             "executable             = RELMON_%s.sh" % (relmon_id),
             "environment            = %s" % (credentials_env_arg),
@@ -168,7 +170,7 @@ class FileCreator:
             # Leave in queue when status is DONE for two hours - 7200 seconds
             "leave_in_queue         = JobStatus == 4 && (CompletionDate =?= UNDEFINED"
             "                         || ((CurrentTime - CompletionDate) < 7200))",
-            '+AccountingGroup       = "group_u_CMS.CAF.PHYS"',
+            '+AccountingGroup       = "%s"' % (accounting_group),
             "queue",
         ]
 

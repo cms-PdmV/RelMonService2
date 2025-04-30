@@ -44,6 +44,9 @@ Attributes:
     CALLBACK_CLIENT_ID (str): Client ID for CLI integration application.
     CALLBACK_CLIENT_SECRET (str): Client secret for CLI integration application.
     CMSSW_RELEASE (str): cms-sw version to use for generating the monitoring report.
+    HTCONDOR_CAF_POOL (bool): If this environment variable is provided,
+        RelMon batch jobs will be configured to run inside the dedicated pool CMS CAF.
+        Otherwise, they will run in the public shared pool.
 """
 import os
 import inspect
@@ -78,6 +81,10 @@ SECRET_KEY: str = os.getenv("SECRET_KEY", "")
 CLIENT_ID: str = os.getenv("CLIENT_ID", "")
 CALLBACK_CLIENT_ID: str = os.getenv("CALLBACK_CLIENT_ID", "")
 CALLBACK_CLIENT_SECRET: str = os.getenv("CALLBACK_CLIENT_SECRET", "")
+
+# HTCondor submission pool
+HTCONDOR_CAF_POOL = bool(os.getenv("HTCONDOR_CAF_POOL"))
+HTCONDOR_MODULE = "lxbatch/tzero" if HTCONDOR_CAF_POOL else "lxbatch/share"
 
 # Check that all environment variables are provided
 missing_environment_variables: dict[str, str] = {
