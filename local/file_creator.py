@@ -12,7 +12,9 @@ from environment import (
     CLIENT_ID,
     CMSSW_RELEASE,
     HTCONDOR_CAF_POOL,
-    DISABLE_CALLBACK_CREDENTIALS
+    DISABLE_CALLBACK_CREDENTIALS,
+    FILE_CREATOR_GIT_SOURCE,
+    FILE_CREATOR_GIT_BRANCH
 )
 
 
@@ -57,7 +59,7 @@ class FileCreator:
             'echo "Python version: $(python3 -V)"',
             'echo "CMSSW release to use: $RELMON_CMSSW_RELEASE"',
             # Clone the relmon service
-            "git clone https://github.com/cms-PdmV/relmonservice2.git",
+            "git clone --branch %s %s relmonservice2" % (FILE_CREATOR_GIT_BRANCH, FILE_CREATOR_GIT_SOURCE),
             # Fallback for github hiccups
             "if [ ! -d relmonservice2 ]; then",
             "  wget https://github.com/cms-PdmV/RelmonService2/archive/master.zip",

@@ -47,6 +47,9 @@ Attributes:
     HTCONDOR_CAF_POOL (bool): If this environment variable is provided,
         RelMon batch jobs will be configured to run inside the dedicated pool CMS CAF.
         Otherwise, they will run in the public shared pool.
+    FILE_CREATOR_GIT_SOURCE (str): RelMonService2 source code to load inside the
+        HTCondor batch jobs.
+    FILE_CREATOR_GIT_BRANCH (str): Branch to use from `FILE_CREATOR_GIT_SOURCE`.
 """
 import os
 import inspect
@@ -86,6 +89,10 @@ DISABLE_CALLBACK_CREDENTIALS = bool(os.getenv("DISABLE_CALLBACK_CREDENTIALS"))
 # HTCondor submission pool
 HTCONDOR_CAF_POOL = bool(os.getenv("HTCONDOR_CAF_POOL"))
 HTCONDOR_MODULE = "lxbatch/tzero" if HTCONDOR_CAF_POOL else "lxbatch/share"
+
+# Repository source for the remote execution in HTCondor.
+FILE_CREATOR_GIT_SOURCE: str = os.getenv("FILE_CREATOR_GIT_SOURCE", "https://github.com/cms-PdmV/relmonservice2.git")
+FILE_CREATOR_GIT_BRANCH: str = os.getenv("FILE_CREATOR_GIT_BRANCH", "master")
 
 # Check that all environment variables are provided
 missing_environment_variables: dict[str, str] = {
