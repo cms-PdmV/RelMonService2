@@ -14,7 +14,9 @@ from environment import (
     HTCONDOR_CAF_POOL,
     DISABLE_CALLBACK_CREDENTIALS,
     FILE_CREATOR_GIT_SOURCE,
-    FILE_CREATOR_GIT_BRANCH
+    FILE_CREATOR_GIT_BRANCH,
+    _CMSSW_CUSTOM_REPO,
+    _CMSSW_CUSTOM_BRANCH
 )
 
 
@@ -31,6 +33,26 @@ class FileCreator:
 
         self.cookie_url = SERVICE_URL
         self.callback_url = CALLBACK_URL
+
+    def load_custom_cmssw(self):
+        """Include some bash instructions to use a custom cms-sw source."""
+        if not (_CMSSW_CUSTOM_REPO and _CMSSW_CUSTOM_BRANCH):
+            return []
+
+        return [
+            'echo "Using a custom cms-sw source - Source: %s - Branch: %s"' % (_CMSSW_CUSTOM_REPO, _CMSSW_CUSTOM_BRANCH),
+            'git clone --no-checkout --sparse --filter=blob:none --branch "%s" --depth 1 "%s" cmssw' % (_CMSSW_CUSTOM_BRANCH, _CMSSW_CUSTOM_REPO),
+            'cd cmssw/',
+            'git sparse-checkout add Utilities/RelMon',
+            'git checkout',
+            'echo "Latest commit available: $(git rev-parse HEAD)"',
+            'cd ..',
+            # Pull the desired module
+            'mv ./cmssw/Utilities .',
+            'rm -rf ./cmssw',
+            # Recompile
+            "scram b -j 4",
+        ]
 
     def create_job_script_file(self, relmon):
         """
@@ -73,6 +95,14 @@ class FileCreator:
             # Open scope for CMSSW
             "(",
             "eval `scramv1 runtime -sh`",
+        ]
+
+        # Check if a custom cms-sw source is requested to be loaded
+        custom_cmssw_content = self.load_custom_cmssw()
+        if custom_cmssw_content:
+            script_file_content += custom_cmssw_content
+
+        script_file_content += [
             "cd ../..",
             # Create reports directory
             "mkdir -p Reports",
