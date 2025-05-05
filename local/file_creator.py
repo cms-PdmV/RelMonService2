@@ -11,7 +11,8 @@ from environment import (
     CALLBACK_CLIENT_SECRET,
     CLIENT_ID,
     CMSSW_RELEASE,
-    HTCONDOR_CAF_POOL
+    HTCONDOR_CAF_POOL,
+    DISABLE_CALLBACK_CREDENTIALS
 )
 
 
@@ -43,6 +44,11 @@ class FileCreator:
             relmon_id,
             relmon_name,
         )
+        callback_credentials = (
+            "--callback-credentials"
+            if not DISABLE_CALLBACK_CREDENTIALS
+            else ""
+        )
         script_file_content = [
             "#!/bin/bash",
             "DIR=$(pwd)",
@@ -70,8 +76,8 @@ class FileCreator:
             "mkdir -p Reports",
             # Run the remote apparatus
             "python3 relmonservice2/remote/remote_apparatus.py "  # No newline
-            "-r RELMON_%s.json -p proxy.txt --cpus %s --callback %s"
-            % (relmon_id, cpus, self.callback_url),
+            "-r RELMON_%s.json -p proxy.txt --cpus %s --callback %s %s"
+            % (relmon_id, cpus, self.callback_url, callback_credentials),
             # Close scope for CMSSW
             ")",
             "cd $DIR",
@@ -117,8 +123,8 @@ class FileCreator:
             "cd $DIR",
             "cp cookie.txt relmonservice2/remote",
             "python3 relmonservice2/remote/remote_apparatus.py "  # No newlines here
-            "-r RELMON_%s.json --callback %s --notifydone"
-            % (relmon_id, self.callback_url),
+            "-r RELMON_%s.json --callback %s --notifydone %s"
+            % (relmon_id, self.callback_url, callback_credentials),
         ]
 
         script_file_content_string = "\n".join(script_file_content)

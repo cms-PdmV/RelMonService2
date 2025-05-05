@@ -165,16 +165,13 @@ def get_access_token(credentials):
     return header
 
 
-def notify(relmon, callback_url):
+def notify(relmon, callback_url, callback_credentials):
     """
     Send a notification about progress back to RelMon service
     """
 
     with open("notify_data.json", "w") as json_file:
         json.dump(relmon, json_file, indent=2, sort_keys=True)
-
-    credentials = get_client_credentials()
-    access_token = get_access_token(credentials)
 
     command = [
         "curl",
@@ -190,9 +187,15 @@ def notify(relmon, callback_url):
         "@notify_data.json",
         "-H",
         "'Content-Type: application/json'",
-        "-H",
-        "'Authorization: %s'" % access_token,
     ]
+    if callback_credentials:
+        credentials = get_client_credentials()
+        access_token = get_access_token(credentials)
+        command += [
+            "-H",
+            "'Authorization: %s'" % access_token,
+        ]
+
     command = " ".join(command)
     logging.info("Notifying...")
     proc = Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
@@ -204,7 +207,7 @@ def notify(relmon, callback_url):
     time.sleep(0.05)
 
 
-def download_root_files(relmon, cmsweb, callback_url):
+def download_root_files(relmon, cmsweb, callback_url, callback_credentials):
     """
     Download all files needed for comparison and fill relmon dictionary
     """
@@ -227,7 +230,7 @@ def download_root_files(relmon, cmsweb, callback_url):
                 workflow = cmsweb.get_workflow(item["name"])
                 if not workflow:
                     item["status"] = "no_workflow"
-                    notify(relmon, callback_url)
+                    notify(relmon, callback_url, callback_credentials)
                     logging.warning(
                         "Could not find workflow %s in ReqMgr2", item["name"]
                     )
@@ -236,7 +239,7 @@ def download_root_files(relmon, cmsweb, callback_url):
                 dqmio_dataset = get_dqmio_dataset(workflow)
                 if not dqmio_dataset:
                     item["status"] = "no_dqmio"
-                    notify(relmon, callback_url)
+                    notify(relmon, callback_url, callback_credentials)
                     logging.warning(
                         "Could not find DQMIO dataset in %s. Datasets: %s",
                         item["name"],
@@ -249,7 +252,7 @@ def download_root_files(relmon, cmsweb, callback_url):
             )
             if not file_urls:
                 item["status"] = "no_root"
-                notify(relmon, callback_url)
+                notify(relmon, callback_url, callback_credentials)
                 logging.warning(
                     "Could not get root file path for %s dataset of %s workflow",
                     dqmio_dataset,
@@ -266,7 +269,7 @@ def download_root_files(relmon, cmsweb, callback_url):
             item["status"] = "downloading"
             item["file_name"] = item["file_url"].split("/")[-1]
             item["events"] = 0
-            notify(relmon, callback_url)
+            notify(relmon, callback_url, callback_credentials)
             try:
                 item["file_name"] = cmsweb.get_big_file(item["file_url"])
                 item["status"] = "downloaded"
@@ -283,7 +286,7 @@ def download_root_files(relmon, cmsweb, callback_url):
                 logging.error("Error getting %s for %s", item["file_url"], item["name"])
                 item["status"] = "failed"
 
-            notify(relmon, callback_url)
+            notify(relmon, callback_url, callback_credentials)
 
 
 def get_local_subreport_path(category_name, hlt):
@@ -564,7 +567,7 @@ def compare_compress_move(
     proc.communicate()
 
 
-def run_validation_matrix(relmon, cpus, callback_url):
+def run_validation_matrix(relmon, cpus, callback_url, callback_credentials):
     """
     Iterate through categories and start comparison process
     """
@@ -588,7 +591,7 @@ def run_validation_matrix(relmon, cpus, callback_url):
             reference_list, target_list = get_dataset_lists(category)
             if reference_list and target_list:
                 category["status"] = "comparing"
-                notify(relmon, callback_url)
+                notify(relmon, callback_url, callback_credentials)
                 # Run Generator without HLT
                 # Do not run Generator with HLT
                 if hlt in ("only", "both") and category_name.lower() != "generator":
@@ -611,7 +614,7 @@ def run_validation_matrix(relmon, cpus, callback_url):
                     )
 
             category["status"] = "done"
-            notify(relmon, callback_url)
+            notify(relmon, callback_url, callback_credentials)
 
 
 def main():
@@ -637,6 +640,11 @@ def main():
     parser.add_argument(
         "--notifydone", action="store_true", help="Just notify that job is completed"
     )
+    parser.add_argument(
+        "--callback-credentials",
+        action="store_true",
+        help="Request and send OAuth tokens to authenticate the callback"
+    )
 
     args = vars(parser.parse_args())
     logging.basicConfig(
@@ -652,6 +660,7 @@ def main():
     cpus = args.get("cpus", 1)
     callback_url = args.get("callback")
     notify_done = bool(args.get("notifydone"))
+    callback_credentials = bool(args.get("callback_credentials"))
     logging.info(
         "Arguments: %s; cert %s; key %s; proxy: %s; cpus %s; callback %s; notify %s",
         relmon_filename,
@@ -679,9 +688,9 @@ def main():
 
             cmsweb = CMSWebWrapper(cert_file, key_file)
             relmon["status"] = "running"
-            notify(relmon, callback_url)
-            download_root_files(relmon, cmsweb, callback_url)
-            run_validation_matrix(relmon, cpus, callback_url)
+            notify(relmon, callback_url, callback_credentials)
+            download_root_files(relmon, cmsweb, callback_url, callback_credentials)
+            run_validation_matrix(relmon, cpus, callback_url, callback_credentials)
             relmon["status"] = "finishing"
     except Exception as ex:
         logging.error(ex)
@@ -691,7 +700,7 @@ def main():
         with open(relmon_filename, "w") as relmon_file:
             json.dump(relmon, relmon_file, indent=2, sort_keys=True)
 
-    notify(relmon, callback_url)
+    notify(relmon, callback_url, callback_credentials)
 
 
 if __name__ == "__main__":

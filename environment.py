@@ -81,6 +81,7 @@ SECRET_KEY: str = os.getenv("SECRET_KEY", "")
 CLIENT_ID: str = os.getenv("CLIENT_ID", "")
 CALLBACK_CLIENT_ID: str = os.getenv("CALLBACK_CLIENT_ID", "")
 CALLBACK_CLIENT_SECRET: str = os.getenv("CALLBACK_CLIENT_SECRET", "")
+DISABLE_CALLBACK_CREDENTIALS = bool(os.getenv("DISABLE_CALLBACK_CREDENTIALS"))
 
 # HTCondor submission pool
 HTCONDOR_CAF_POOL = bool(os.getenv("HTCONDOR_CAF_POOL"))
