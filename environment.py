@@ -44,6 +44,16 @@ Attributes:
     CALLBACK_CLIENT_ID (str): Client ID for CLI integration application.
     CALLBACK_CLIENT_SECRET (str): Client secret for CLI integration application.
     CMSSW_RELEASE (str): cms-sw version to use for generating the monitoring report.
+    HTCONDOR_CAF_POOL (bool): If this environment variable is provided,
+        RelMon batch jobs will be configured to run inside the dedicated pool CMS CAF.
+        Otherwise, they will run in the public shared pool.
+    FILE_CREATOR_GIT_SOURCE (str): RelMonService2 source code to load inside the
+        HTCondor batch jobs.
+    FILE_CREATOR_GIT_BRANCH (str): Branch to use from `FILE_CREATOR_GIT_SOURCE`.
+    _CMSSW_CUSTOM_REPO (str): This is an optional setting, allows users to
+        compile the RelMon module from a custom source instead of using `cmssw` releases.
+    _CMSSW_CUSTOM_BRANCH (str): If `_CMSSW_CUSTOM_REPO` is set, this is the branch
+        for taking the code from.
 """
 import os
 import inspect
@@ -78,12 +88,27 @@ SECRET_KEY: str = os.getenv("SECRET_KEY", "")
 CLIENT_ID: str = os.getenv("CLIENT_ID", "")
 CALLBACK_CLIENT_ID: str = os.getenv("CALLBACK_CLIENT_ID", "")
 CALLBACK_CLIENT_SECRET: str = os.getenv("CALLBACK_CLIENT_SECRET", "")
+DISABLE_CALLBACK_CREDENTIALS = bool(os.getenv("DISABLE_CALLBACK_CREDENTIALS"))
+
+# HTCondor submission pool
+HTCONDOR_CAF_POOL = bool(os.getenv("HTCONDOR_CAF_POOL"))
+HTCONDOR_MODULE = "lxbatch/tzero" if HTCONDOR_CAF_POOL else "lxbatch/share"
+
+# Repository source for the remote execution in HTCondor.
+FILE_CREATOR_GIT_SOURCE: str = os.getenv("FILE_CREATOR_GIT_SOURCE", "https://github.com/cms-PdmV/relmonservice2.git")
+FILE_CREATOR_GIT_BRANCH: str = os.getenv("FILE_CREATOR_GIT_BRANCH", "master")
+
+# Custom `cmssw` sources for development
+# Use this to override the RelMon module from a custom source
+# instead of using a release
+_CMSSW_CUSTOM_REPO: str = os.getenv("CMSSW_CUSTOM_REPO", "")
+_CMSSW_CUSTOM_BRANCH: str = os.getenv("CMSSW_CUSTOM_BRANCH", "")
 
 # Check that all environment variables are provided
 missing_environment_variables: dict[str, str] = {
     k: v
     for k, v in globals().items()
-    if not k.startswith("__")
+    if not k.startswith("_")
     and not inspect.ismodule(v)
     and not isinstance(v, bool)
     and not v

@@ -1,0 +1,22 @@
+name: relmonservice2
+
+services:
+  nginx:
+    image: nginx:2.26.3-alpine3.20-perl@sha256:ecf827c698f16db476cdf5ebd094881b7fde88514a1cbf0d11780bdd8120041f
+    volumes:
+      - "${PWD}/deploy/nginx/conf.d:/etc/nginx/conf.d:ro"
+      - "${PWD}/report_website:/var/www/html:ro"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "10000:10000"
+  mongodb:
+    image: mongodb/mongodb-community-server:7.0.7-ubi9@sha256:0ab7391ec61a618ff2d9b999146812e0c1c29631cdc86bc096c60c77ba9e2cfb
+    user: "${UID}:${GID}"
+    environment:
+      - "MONGODB_INITDB_ROOT_USERNAME=${MONGO_DB_USER}"
+      - "MONGODB_INITDB_ROOT_PASSWORD=${MONGO_DB_PASSWORD}"
+    volumes:
+      - "${PWD}/deploy/mongo/data:/data/db"
+    ports:
+      - "${MONGO_DB_PORT}:27017"

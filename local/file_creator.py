@@ -10,7 +10,13 @@ from environment import (
     CALLBACK_CLIENT_ID,
     CALLBACK_CLIENT_SECRET,
     CLIENT_ID,
-    CMSSW_RELEASE
+    CMSSW_RELEASE,
+    HTCONDOR_CAF_POOL,
+    DISABLE_CALLBACK_CREDENTIALS,
+    FILE_CREATOR_GIT_SOURCE,
+    FILE_CREATOR_GIT_BRANCH,
+    _CMSSW_CUSTOM_REPO,
+    _CMSSW_CUSTOM_BRANCH
 )
 
 
@@ -28,6 +34,26 @@ class FileCreator:
         self.cookie_url = SERVICE_URL
         self.callback_url = CALLBACK_URL
 
+    def load_custom_cmssw(self):
+        """Include some bash instructions to use a custom cms-sw source."""
+        if not (_CMSSW_CUSTOM_REPO and _CMSSW_CUSTOM_BRANCH):
+            return []
+
+        return [
+            'echo "Using a custom cms-sw source - Source: %s - Branch: %s"' % (_CMSSW_CUSTOM_REPO, _CMSSW_CUSTOM_BRANCH),
+            'git clone --no-checkout --sparse --filter=blob:none --branch "%s" --depth 1 "%s" cmssw' % (_CMSSW_CUSTOM_BRANCH, _CMSSW_CUSTOM_REPO),
+            'cd cmssw/',
+            'git sparse-checkout add Utilities/RelMon',
+            'git checkout',
+            'echo "Latest commit available: $(git rev-parse HEAD)"',
+            'cd ..',
+            # Pull the desired module
+            'mv ./cmssw/Utilities .',
+            'rm -rf ./cmssw',
+            # Recompile
+            "scram b -j 4",
+        ]
+
     def create_job_script_file(self, relmon):
         """
         Create bash executable for condor
@@ -42,6 +68,11 @@ class FileCreator:
             relmon_id,
             relmon_name,
         )
+        callback_credentials = (
+            "--callback-credentials"
+            if not DISABLE_CALLBACK_CREDENTIALS
+            else ""
+        )
         script_file_content = [
             "#!/bin/bash",
             "DIR=$(pwd)",
@@ -50,7 +81,7 @@ class FileCreator:
             'echo "Python version: $(python3 -V)"',
             'echo "CMSSW release to use: $RELMON_CMSSW_RELEASE"',
             # Clone the relmon service
-            "git clone https://github.com/cms-PdmV/relmonservice2.git",
+            "git clone --branch %s %s relmonservice2" % (FILE_CREATOR_GIT_BRANCH, FILE_CREATOR_GIT_SOURCE),
             # Fallback for github hiccups
             "if [ ! -d relmonservice2 ]; then",
             "  wget https://github.com/cms-PdmV/RelmonService2/archive/master.zip",
@@ -64,13 +95,21 @@ class FileCreator:
             # Open scope for CMSSW
             "(",
             "eval `scramv1 runtime -sh`",
+        ]
+
+        # Check if a custom cms-sw source is requested to be loaded
+        custom_cmssw_content = self.load_custom_cmssw()
+        if custom_cmssw_content:
+            script_file_content += custom_cmssw_content
+
+        script_file_content += [
             "cd ../..",
             # Create reports directory
             "mkdir -p Reports",
             # Run the remote apparatus
             "python3 relmonservice2/remote/remote_apparatus.py "  # No newline
-            "-r RELMON_%s.json -p proxy.txt --cpus %s --callback %s"
-            % (relmon_id, cpus, self.callback_url),
+            "-r RELMON_%s.json -p proxy.txt --cpus %s --callback %s %s"
+            % (relmon_id, cpus, self.callback_url, callback_credentials),
             # Close scope for CMSSW
             ")",
             "cd $DIR",
@@ -116,8 +155,8 @@ class FileCreator:
             "cd $DIR",
             "cp cookie.txt relmonservice2/remote",
             "python3 relmonservice2/remote/remote_apparatus.py "  # No newlines here
-            "-r RELMON_%s.json --callback %s --notifydone"
-            % (relmon_id, self.callback_url),
+            "-r RELMON_%s.json --callback %s --notifydone %s"
+            % (relmon_id, self.callback_url, callback_credentials),
         ]
 
         script_file_content_string = "\n".join(script_file_content)
@@ -151,6 +190,7 @@ class FileCreator:
             f"APPLICATION_CLIENT_ID={CLIENT_ID}"
         )
         credentials_env_arg = f'"{credentials_env}"'
+        accounting_group = "group_u_CMS.CAF.PHYS" if HTCONDOR_CAF_POOL else "group_u_CMS.u_zh.users"
         condor_file_content = [
             "executable             = RELMON_%s.sh" % (relmon_id),
             "environment            = %s" % (credentials_env_arg),
@@ -168,7 +208,7 @@ class FileCreator:
             # Leave in queue when status is DONE for two hours - 7200 seconds
             "leave_in_queue         = JobStatus == 4 && (CompletionDate =?= UNDEFINED"
             "                         || ((CurrentTime - CompletionDate) < 7200))",
-            '+AccountingGroup       = "group_u_CMS.CAF.PHYS"',
+            '+AccountingGroup       = "%s"' % (accounting_group),
             "queue",
         ]
 
