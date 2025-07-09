@@ -1,3 +1,6 @@
+> [!IMPORTANT]  
+> This repository has been migrated to the PPD Technical Support team inside the CERN GitLab instance: [RelMonService2](https://gitlab.cern.ch/cms-ppd/technical-support/web-services/RelMonService2). Please open and follow issues directly there, do not open or follow them here!
+
 # RelMonService2
 
 ## Introduction
